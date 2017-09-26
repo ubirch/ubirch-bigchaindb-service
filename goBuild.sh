@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 
-set -xe
+set -e
 
 function build_container() {
     source Dockerfile.input
