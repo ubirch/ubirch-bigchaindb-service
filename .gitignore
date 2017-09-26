@@ -18,8 +18,3 @@ project/plugins/project/
 
 .idea
 
-cache
-
-# Docker related files
-Dockerfile
-Dockerfile.input
