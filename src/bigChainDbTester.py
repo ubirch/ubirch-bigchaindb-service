@@ -14,8 +14,9 @@ logger.setLevel(logging.DEBUG)
 
 awsAccessKeyId = 'AWS_ACCESS_KEY_ID'
 awsSecretAccessKey = 'AWS_SECRET_ACCESS_KEY'
-sqsChainInKey = 'SQS_CHAIN_IN'
-sqsRegionKey = 'SQS_REGION'
+
+sqsChainInKey = 'SQS_UBIRCH_BIGCHAIN_DB_IN'
+sqsRegionKey = 'AWS_REGION'
 numThreadsKey = 'NUM_TRHEADS'
 
 if (awsAccessKeyId not in os.environ or awsSecretAccessKey not in os.environ):

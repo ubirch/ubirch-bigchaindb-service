@@ -10,6 +10,8 @@ import logging
 from bigchaindb_driver import BigchainDB
 from bigchaindb_driver.crypto import generate_keypair
 
+from cmreslogging.handlers import CMRESHandler
+
 import threading
 
 FORMAT = '%(asctime)-15s [%(levelname)s] %(message)s'
@@ -17,8 +19,8 @@ logging.basicConfig(format=FORMAT)
 logger = logging.getLogger('bigChainDbStore')
 logger.setLevel(logging.DEBUG)
 
-awsAccessKeyIdKey = 'AWS_ACCESS_KEY_ID'
-awsSecretAccessKeyKey = 'AWS_SECRET_ACCESS_KEY'
+awsAccessKeyId = 'AWS_ACCESS_KEY_ID'
+awsSecretAccessKey = 'AWS_SECRET_ACCESS_KEY'
 sqsChainInKey = 'SQS_UBIRCH_BIGCHAIN_DB_IN'
 sqsChainTxKey = 'SQS_UBIRCH_BIGCHAIN_DB_TX'
 sqsRegionKey = 'AWS_REGION'
@@ -26,8 +28,18 @@ ipdbAppIdKey = 'IPDB_APP_ID'
 ipdbAppKeyKey = 'IPDB_APP_KEY'
 bigChainDbHostKey = 'BIG_CHAIN_DB_HOST'
 numThreadsKey = 'NUM_TRHEADS'
+esLoggerHostKey = 'ES_LOG_HOST'
+esLoggerPortKey = 'ES_LOG_PORT'
 
-if (awsAccessKeyIdKey not in os.environ or awsSecretAccessKeyKey not in os.environ):
+if (esLoggerHostKey in os.environ.keys()):
+    esLoggerHost = os.environ[esLoggerHostKey]
+    esLoggerPort = int(os.environ[esLoggerPortKey])
+    esLoggerHandler = CMRESHandler(hosts=[{'host': esLoggerHost, 'port': esLoggerPort}],
+                                   auth_type=CMRESHandler.AuthType.NO_AUTH,
+                                   es_index_name="big-chain-store-service-logs")
+    logger.addHandler(esLoggerHandler)
+
+if (awsAccessKeyId not in os.environ or awsSecretAccessKey not in os.environ):
     logger.error("env vars missing")
     logger.info("AWS_ACCESS_KEY_ID -> AWS access key")
     logger.info("AWS_SECRET_ACCESS_KEY -> AWS secret key")
@@ -42,21 +54,9 @@ if (awsAccessKeyIdKey not in os.environ or awsSecretAccessKeyKey not in os.envir
     logger.info("NUM_TRHEADS -> # of threads which poll new messages (optional), , default is 1")
     exit(1)
 
-awsAccessKeyId = os.environ[awsAccessKeyIdKey]
-awsSecretAccessKey = os.environ[awsSecretAccessKeyKey]
-awsRegion = os.environ[sqsRegionKey] if sqsRegionKey in os.environ else 'eu-central-1'
+REGION = os.environ[sqsRegionKey] if sqsRegionKey in os.environ else 'eu-central-1'
 
-logger.info("region: %s" % awsRegion)
-logger.info("awsAccessKeyId: %s" % awsAccessKeyId)
-logger.info("awsSecretAccessKey: %s%s" % (awsSecretAccessKey[1:5], "******************"))
-
-sqs = boto3.resource(
-    'sqs',
-    use_ssl=True,
-    aws_access_key_id=awsAccessKeyId,
-    aws_secret_access_key=awsSecretAccessKey,
-    region_name=awsRegion
-)
+sqs = boto3.resource('sqs', region_name=REGION)
 
 inQueue = os.environ[sqsChainInKey] if sqsChainInKey in os.environ else "local_dev_ubirch_bigchaindb_in"
 txQueue = os.environ[sqsChainTxKey] if sqsChainTxKey in os.environ else "local_dev_ubirch_bigchaindb_tx"
@@ -68,15 +68,10 @@ bigChainDbHost = os.environ[bigChainDbHostKey] if bigChainDbHostKey in os.enviro
 logger.info("current bigchaindb hosT: %s" % (bigChainDbHost))
 numThreads = int(os.environ[numThreadsKey]) if numThreadsKey in os.environ else 1
 
-logger.info("bigChainDbHost: %s" % bigChainDbHost)
-
 tokens = {}
 if ipdbAppIdKey in os.environ:
     tokens['app_id'] = os.environ[ipdbAppIdKey] if ipdbAppIdKey in os.environ else ""
     tokens['app_key'] = os.environ[ipdbAppKeyKey] if ipdbAppKeyKey in os.environ else ""
-    logger.info("app_id: %s" % tokens['app_id'])
-    logger.info("app_key: %s" % tokens['app_key'])
-
 
 metadata = {'service': 'ubirchChainService'}
 bdb = BigchainDB(bigChainDbHost, headers=tokens)
@@ -121,7 +116,7 @@ def process_message(message):
 
 
 def sendTx(tx):
-    sqs = boto3.resource('sqs', region_name=awsRegion)
+    sqs = boto3.resource('sqs', region_name=REGION)
     queue = sqs.get_queue_by_name(QueueName=txQueue)
     queue.send_message(MessageBody=tx)
 
