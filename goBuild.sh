@@ -25,9 +25,7 @@ function init() {
 
 function build_container() {
 
-  mkdir -p TMP
-  cp Dockerfile.template TMP/Dockerfile
-  cd TMP
+  cp Dockerfile.template Dockerfile
 
   if [ -z $GO_PIPELINE_LABEL ]; then
       # building without GoCD
