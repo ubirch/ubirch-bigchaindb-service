@@ -63,6 +63,9 @@ function container_tag () {
 }
 
 case "$1" in
+    assembly)
+        echo "Assembly skipped, not supported."
+        ;;
     containerbuild)
         build_container
         ;;
